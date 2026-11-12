@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ExploraSTEAM 3D: campus virtual flotante para aprender Ciencia, Tecnología, Ingeniería, Arte y Matemáticas en primaria. Three.js + WebGL 2 + GLSL.">
+    <meta name="theme-color" content="#7b2cbf">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="ExploraSTEAM">
+    <title>ExploraSTEAM 3D · Campus Virtual de Aprendizaje</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="assets/img/icon-192.png">
+    <link rel="apple-touch-icon" href="assets/img/icon-192.png">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐥</text></svg>">
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- Librerías locales (sin dependencia de CDN: funciona en colegios sin internet completo) -->
+    <script src="vendor/three.min.js"></script>
+    <script src="vendor/gsap.min.js"></script>
+    <script src="vendor/OrbitControls.js"></script>
+</head>
+<body>
+
+    <!-- ═══ HUD SUPERIOR ═══ -->
+    <div class="title-banner">
+        <h1>ExploraSTEAM 3D</h1>
+        <span>Entorno Virtual Inmersivo de Aprendizaje</span>
+    </div>
+
+    <div class="hud-actions" role="toolbar" aria-label="Herramientas">
+        <button id="btn-voice" class="hud-btn" type="button" aria-pressed="true" title="Voz de Pío (Web Speech API)">🔊</button>
+        <button id="btn-music" class="hud-btn" type="button" aria-pressed="true" title="Música de fondo generativa">🎵</button>
+        <button id="btn-progress" class="hud-btn" type="button" title="Mi progreso y medallas">⭐</button>
+        <button id="btn-install" class="hud-btn" type="button" title="Instalar la app en este dispositivo">📲</button>
+        <button id="btn-stats" class="hud-btn" type="button" aria-pressed="false" title="Mostrar u ocultar estadísticas técnicas del render">📊</button>
+        <button id="btn-about" class="hud-btn" type="button" title="Acerca del proyecto">ℹ️</button>
+    </div>
+
+    <!-- Estadísticas de computación gráfica en vivo -->
+    <div id="cg-stats" class="cg-stats hidden" title="Estadísticas en vivo del renderizador WebGL">⚡ 60 FPS</div>
+
+    <!-- Pista contextual inferior -->
+    <div id="hud-hint" class="hud-hint">Pasa el cursor sobre una isla y haz clic: ¡Pío cruzará el puente contigo! 🐥</div>
+
+    <div id="canvas-container" aria-label="Mundo 3D interactivo"></div>
+
+    <!-- ═══ PANEL LATERAL DIDÁCTICO ═══ -->
+    <aside id="module-panel" class="side-panel hidden" aria-label="Panel de aprendizaje">
+        <div class="learning-card">
+            <button id="btn-back" class="btn-back hidden" type="button" title="Volver a las misiones">← Misiones</button>
+            <button id="btn-close" class="btn-close" type="button" title="Cerrar y volver al campus" aria-label="Cerrar">&times;</button>
+
+            <div class="panel-island-header">
+                <img id="panel-island-img" class="panel-island-img" src="assets/img/pio-hero.jpg" alt="Isla STEAM">
+                <div class="panel-island-overlay"></div>
+                <div class="panel-island-text">
+                    <span id="panel-stars" class="panel-stars">⭐ 0 / 15</span>
+                    <h2 id="panel-title">Isla</h2>
+                    <p id="panel-tagline">Tagline</p>
+                </div>
+            </div>
+
+            <div id="panel-kicker" class="phase-kicker">🗺️ Elige tu misión</div>
+
+            <!-- ── SELECTOR DE MISIONES ── -->
+            <div id="topic-picker" class="topic-picker" role="list"></div>
+
+            <!-- ── FLUJO DE MISIÓN (3 fases) ── -->
+            <div id="phase-wrapper" class="phase-wrapper hidden">
+                <h3 id="topic-title" class="topic-title"><span class="topic-title-icon">🎯</span> Misión</h3>
+
+                <div class="phase-dots" aria-hidden="true">
+                    <span class="phase-dot active" data-phase="1">1</span>
+                    <span class="phase-dot" data-phase="2">2</span>
+                    <span class="phase-dot" data-phase="3">3</span>
+                </div>
+
+                <!-- FASE 1 · ¿Sabías que? -->
+                <div id="phase-1" class="phase-content">
+                    <div id="trivia-media" class="trivia-media">
+                        <span id="trivia-emoji" class="trivia-emoji" aria-hidden="true">🔬</span>
+                        <button id="btn-audio" class="btn-audio" type="button">🔊 Escuchar a Pío</button>
+                    </div>
+                    <p id="trivia-text" class="trivia-text"></p>
+                    <button id="btn-video" class="btn-video" type="button"><span id="video-btn-label">🎬 Ver video de Pío</span></button>
+                </div>
+
+                <!-- FASE 2 · Experimentación (Modo A / Modo B) -->
+                <div id="phase-2" class="phase-content hidden">
+                    <div class="mode-toggle" role="tablist" aria-label="Elige cómo experimentar">
+                        <button id="btn-mode-a" class="mode-btn active" type="button" role="tab">🔬 Laboratorio 3D</button>
+                        <button id="btn-mode-b" class="mode-btn" type="button" role="tab">🎮 Minijuego</button>
+                    </div>
+
+                    <!-- Modo A: slider que modifica la escena WebGL en vivo -->
+                    <div id="lab-panel" class="lab-panel">
+                        <div id="slider-box" class="slider-box">
+                            <label id="slider-label" class="slider-label" for="demo-slider">Parámetro</label>
+                            <div class="slider-row">
+                                <input type="range" id="demo-slider" min="0" max="100" value="50" step="1" aria-describedby="lab-caption">
+                                <output id="slider-value" class="slider-value">50</output>
+                            </div>
+                            <p id="lab-caption" class="lab-caption">Mueve el control y observa la isla…</p>
+                        </div>
+
+                        <!-- Laboratorio de Rasterización (solo tema de líneas, Arte) -->
+                        <div id="raster-wrap" class="raster-wrap hidden">
+                            <canvas id="raster-canvas" class="raster-canvas" width="360" height="190" aria-label="Lienzo de rasterización"></canvas>
+                            <div class="raster-toolbar">
+                                <button class="raster-tool" type="button" data-line="recta">📏 Recta</button>
+                                <button class="raster-tool" type="button" data-line="ondulada">〰️ Ondulada</button>
+                                <button class="raster-tool" type="button" data-line="zigzag">⚡ Zig-Zag</button>
+                            </div>
+                            <div class="raster-toolbar">
+                                <button class="raster-color active" type="button" data-color="#e5383b" style="--c:#e5383b" aria-label="Rojo"></button>
+                                <button class="raster-color" type="button" data-color="#1971c2" style="--c:#1971c2" aria-label="Azul"></button>
+                                <button class="raster-color" type="button" data-color="#ffc300" style="--c:#ffc300" aria-label="Amarillo"></button>
+                                <button class="raster-color" type="button" data-color="#2b9348" style="--c:#2b9348" aria-label="Verde"></button>
+                                <button id="raster-clear" class="raster-clear" type="button">🧹 Limpiar</button>
+                            </div>
+                            <p id="raster-note" class="raster-note">Rasterización: convierte líneas en píxeles (Bresenham).</p>
+                        </div>
+                    </div>
+
+                    <!-- Modo B: arcade "Toca los correctos" -->
+                    <div id="game-panel" class="game-panel hidden">
+                        <p id="game-prompt" class="game-prompt">Encuentra los objetos correctos</p>
+                        <div id="game-chips" class="game-chips" role="list"></div>
+                        <div class="game-status-row">
+                            <div id="game-goal" class="game-goal" aria-label="Progreso"></div>
+                            <span id="game-mistakes" class="game-mistakes">❌ Fallos: 0</span>
+                        </div>
+                        <p id="game-feedback" class="game-feedback"></p>
+                    </div>
+                </div>
+
+                <!-- FASE 3 · Quiz -->
+                <div id="phase-3" class="phase-content hidden">
+                    <div class="quiz-top-row">
+                        <span id="quiz-progress" class="quiz-progress">Pregunta 1 de 3</span>
+                        <button id="btn-quiz-audio" class="btn-quiz-audio" type="button" title="Escuchar la pregunta">🔊</button>
+                    </div>
+                    <p id="quiz-question" class="quiz-question"></p>
+                    <div id="quiz-options" class="options-container"></div>
+                    <p id="quiz-feedback" class="quiz-feedback"></p>
+                </div>
+
+                <button id="btn-next" class="btn-primary" type="button">¡A experimentar! 🧪</button>
+            </div>
+
+            <!-- ── PANTALLA DE RESULTADOS ── -->
+            <div id="phase-done" class="phase-done hidden">
+                <div id="confetti-layer" class="confetti-layer" aria-hidden="true"></div>
+                <img src="assets/img/pio-hero.jpg" alt="Pío celebra" class="done-pio">
+                <h3 id="done-title" class="done-title">¡Misión completada!</h3>
+                <div id="done-stars" class="done-stars" aria-label="Estrellas ganadas">
+                    <span class="done-star">⭐</span>
+                    <span class="done-star">⭐</span>
+                    <span class="done-star">⭐</span>
+                </div>
+                <p id="done-score" class="done-score">Acertaste 3 de 3 preguntas</p>
+                <button id="btn-done-campus" class="btn-primary" type="button">¡Volver al campus! 🏝️</button>
+                <button id="btn-done-retry" class="btn-secondary" type="button">Repetir misión 🔁</button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ═══ MODAL DE VIDEO DE PÍO (narrado offline) ═══ -->
+    <div id="video-modal" class="overlay-modal hidden" role="dialog" aria-modal="true" aria-label="Video de Pío">
+        <div class="overlay-card video-card">
+            <button id="video-close" class="overlay-close" type="button" aria-label="Cerrar video">&times;</button>
+            <h3 id="video-title" class="overlay-title">🎬 Video de Pío</h3>
+            <div class="video-stage">
+                <div id="video-slide-visual" class="video-slide-visual"><span id="video-slide-emoji" class="video-slide-emoji">🐥</span></div>
+                <div class="video-slide-body">
+                    <h4 id="video-slide-title" class="video-slide-title">Misión</h4>
+                    <p id="video-slide-text" class="video-slide-text">Cargando…</p>
+                </div>
+                <div class="video-progress"><div id="video-progress-fill" class="video-progress-fill"></div></div>
+                <div class="video-controls">
+                    <button id="video-prev" class="video-ctrl" type="button" aria-label="Escena anterior">⏮</button>
+                    <button id="video-play" class="video-ctrl video-play" type="button" aria-label="Reproducir o pausar">▶</button>
+                    <button id="video-next" class="video-ctrl" type="button" aria-label="Escena siguiente">⏭</button>
+                    <span id="video-time" class="video-time">Escena 1 / 3</span>
+                </div>
+            </div>
+            <p class="video-voice-note">🔊 Pío narra en voz alta — funciona sin internet</p>
+            <a id="video-search-link" class="btn-video-search" href="https://www.youtube.com/watch?v=mtGgo68VM54" target="_blank" rel="noopener noreferrer" title="Abre el video de esta misión en YouTube">▶ Ver video en YouTube ↗</a>
+        </div>
+    </div>
+
+
+    <!-- ═══ MODAL INSTALAR APP ═══ -->
+    <div id="install-modal" class="overlay-modal hidden" role="dialog" aria-modal="true" aria-label="Instalar la app">
+        <div class="overlay-card install-card">
+            <button id="install-close" class="overlay-close" type="button" aria-label="Cerrar">&times;</button>
+            <h3 class="overlay-title">📲 Instalar ExploraSTEAM 3D</h3>
+            <div id="install-diag" class="install-diag" role="status"></div>
+            <p class="install-lead">La app funciona <strong>sin internet</strong> y queda con su icono de Pío en tu pantalla.</p>
+            <ol class="install-steps">
+                <li><span class="install-where">💻 Chrome / Edge (PC):</span> abre esta página → menú <strong>⋮</strong> → <strong>Instalar ExploraSTEAM…</strong> (o el ícono ⊕ en la barra de direcciones).</li>
+                <li><span class="install-where">🤖 Android (Chrome):</span> menú <strong>⋮</strong> → <strong>Instalar app</strong> o <strong>Añadir a pantalla de inicio</strong>.</li>
+                <li><span class="install-where">🍎 iPhone / iPad (Safari):</span> botón <strong>Compartir</strong> → <strong>Añadir a pantalla de inicio</strong>.</li>
+                <li><span class="install-where">✨ En este dispositivo ahora:</span> si el navegador ofrece instalación directa, pulsa <button id="install-now" class="install-now-btn" type="button">📲 Instalar ahora</button></li>
+            </ol>
+            <p class="install-note">¿Ya está instalada? Ábrela desde su icono: el botón 📲 dejará de hacer falta.</p>
+        </div>
+    </div>
+
+    <!-- ═══ MODAL DE PROGRESO ═══ -->
+    <div id="progress-modal" class="overlay-modal hidden" role="dialog" aria-modal="true" aria-label="Mi progreso">
+        <div class="overlay-card progress-card">
+            <button id="progress-close" class="overlay-close" type="button" aria-label="Cerrar progreso">&times;</button>
+            <h3 class="overlay-title">⭐ Mi Progreso STEAM</h3>
+            <div class="progress-summary">
+                <div class="progress-stat"><span id="progress-total" class="progress-stat-num">0 / 25</span><span class="progress-stat-label">misiones completadas</span></div>
+                <div class="progress-stat"><span id="progress-stars" class="progress-stat-num">0 / 75</span><span class="progress-stat-label">estrellas ganadas</span></div>
+            </div>
+            <div class="progress-bar"><div id="progress-bar-fill" class="progress-bar-fill"></div></div>
+            <div id="progress-islands" class="progress-islands"></div>
+            <h4 class="badges-title">🏅 Mis medallas</h4>
+            <div id="badges-row" class="badges-row"></div>
+        </div>
+    </div>
+
+    <!-- ═══ MODAL ACERCA DE ═══ -->
+    <div id="about-modal" class="overlay-modal hidden" role="dialog" aria-modal="true" aria-label="Acerca del proyecto">
+        <div class="overlay-card about-card">
+            <button id="about-close" class="overlay-close" type="button" aria-label="Cerrar">&times;</button>
+            <h3 class="overlay-title">🐣 ExploraSTEAM 3D</h3>
+            <img src="assets/img/mundo-3d.jpg" alt="El campus flotante explorable de ExploraSTEAM 3D, tal como se ve en el juego" class="about-concept">
+            <p class="about-text">Un campus virtual inmersivo para estudiantes de <b>primaria (6–11 años)</b>. Cada isla propone <b>5 misiones</b> con el ciclo: <b>¿Sabías que…? → Experimenta (Laboratorio 3D o Minijuego) → Reto de 3 preguntas</b>.</p>
+            <p class="about-text"><b>Computación gráfica en acción:</b> L-Systems (árbol procedural), Morphing de mallas (esfera↔cubo), rasterización Bresenham, shaders GLSL (anillos de éxito con Fresnel + pulso), raycasting, sprites de etiquetas, iluminación Phong/Standard y render en tiempo real con WebGL + Three.js.</p>
+            <p class="about-text small"><b>Stack:</b> Three.js r128 · WebGL · GLSL · GSAP 3 · Web Speech API · Web Audio API · Vanilla JS<br>
+            <b>Equipo (2026-1 · Computación Gráfica y Visual):</b> O. Martínez · C. Montalvo · J. Puican · J. Quispe · L. Sotelo · S. Yauri<br>
+            <b>Docente:</b> Alexander D. Gallardo Reyes</p>
+        </div>
+    </div>
+
+    <div id="toast" class="toast hidden" role="status"></div>
+
+    <!-- Carga ordenada de scripts -->
+    <script src="js/curriculum.js"></script>
+    <script src="js/algorithms.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/world.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/interaction.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

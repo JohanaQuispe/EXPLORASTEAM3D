@@ -1,0 +1,19 @@
+{
+  "name": "ExploraSTEAM 3D · Campus Virtual de Aprendizaje",
+  "short_name": "ExploraSTEAM",
+  "description": "Campus virtual flotante 3D para aprender Ciencia, Tecnología, Ingeniería, Arte y Matemáticas en primaria. Funciona sin internet.",
+  "lang": "es",
+  "id": "./",
+  "categories": ["education", "kids", "games"],
+  "prefer_related_applications": false,
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#5a189a",
+  "theme_color": "#7b2cbf",
+  "icons": [
+    { "src": "assets/img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "assets/img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
