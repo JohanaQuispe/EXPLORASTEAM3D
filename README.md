@@ -113,8 +113,5 @@ ExploraSTEAM 3D es una **PWA offline-first**:
 
 ## 🏆 Créditos
 
-Equipo **ExploraSTEAM 3D** (2026-1): Otto Martínez · Camila Montalvo · Josué Puican · Johana Quispe · Leoneld Sotelo · Sebastian Yauri — con las referencias del informe (Duo-Terron et al. 2022; Prusinkiewicz et al. 1996; Lim et al. 2006; El Mawas et al. 2020; Bal & Abrishambaf 2017; Rahman & Islam 2023; Sumners et al. 2021).
-
-4. **Voz personalizada para Pío** (Coqui TTS / ElevenLabs) en lugar de la síntesis robótica del navegador.
-5. **Tests automatizados**: CI con el smoke test de `js/algorithms.js` + métricas WebGL (FPS ≥ 55 en hardware gama baja).
-6. **Evaluación con niños reales**: 30–50 estudiantes, escala SUS + observación de errores de navegación (validación del informe §IV).
+Equipo **ExploraSTEAM 3D** (2026-1): 
+Otto Martínez · Camila Montalvo · Josué Puican · Johana Quispe · Leoneld Sotelo · Sebastian Yauri
